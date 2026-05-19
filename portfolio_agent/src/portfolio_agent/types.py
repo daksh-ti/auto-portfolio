@@ -91,7 +91,8 @@ class PortfolioEntry(BaseModel):
     user_email: str
     overall_score: int
     conversation_title: str
-    conversation_markdown: str
+    user_highlights: list[str]      # 2-4 key user messages (paraphrased/quoted, ≤80 words each)
+    assistant_summary: str          # 1-2 sentences summarising the assistant's contribution
     why_it_matters: str
     citation: str
     rule_scores: list[RuleScore]

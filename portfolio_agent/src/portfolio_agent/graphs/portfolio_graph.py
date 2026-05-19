@@ -7,7 +7,7 @@ from typing import AsyncIterator
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import END, START, StateGraph
 
-from portfolio_agent.agents.analyzer import analyze_node, threshold_gate_node
+from portfolio_agent.agents.analyzer import analyze_node, threshold_gate_node, top_k_gate_node
 from portfolio_agent.agents.extractor import extract_node, filter_users_node
 from portfolio_agent.agents.generator import generate_entries_node
 from portfolio_agent.agents.preprocessor import preprocess_node
@@ -39,6 +39,7 @@ def _compiled_graph(deps: Deps, checkpointer=None):
     g.add_node("preprocess",       _curry(preprocess_node, deps))
     g.add_node("analyze",          _curry(analyze_node, deps))
     g.add_node("threshold_gate",   _curry(threshold_gate_node, deps))
+    g.add_node("top_k_gate",       _curry(top_k_gate_node, deps))
     g.add_node("generate_entries", _curry(generate_entries_node, deps))
     g.add_node("write_to_gdoc",    _curry(write_to_gdoc_node, deps))
 
@@ -49,6 +50,11 @@ def _compiled_graph(deps: Deps, checkpointer=None):
     g.add_edge("analyze",        "threshold_gate")
     g.add_conditional_edges(
         "threshold_gate",
+        lambda s: "top_k_gate" if s.get("qualifying_chats") else END,
+        {"top_k_gate": "top_k_gate", END: END},
+    )
+    g.add_conditional_edges(
+        "top_k_gate",
         lambda s: "generate_entries" if s.get("qualifying_chats") else END,
         {"generate_entries": "generate_entries", END: END},
     )

@@ -1,9 +1,9 @@
-Chat (verbatim):
+Chat (full conversation for context — extract engineer messages only for user_highlights):
 {{ chat_text }}
 
-Rule scores (highest weighted-contribution first):
+Top rule scores (for context — use to inform why_it_matters, do NOT copy into the entry):
 {% for s in top_rule_scores %}
-- {{ s.rule_name }} ({{ s.score }}/100, weight {{ s.weight }}): {{ s.justification }}
+- {{ s.rule_name }} ({{ s.score }}/100): {{ s.justification }}
 {% endfor %}
 
 Overall score: {{ overall_score }}/100

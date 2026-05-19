@@ -70,6 +70,9 @@ class Settings(BaseSettings):
     manual_approval_threshold: float = 0.30
     weight_min: float = 0.1
     weight_max: float = 3.0
+    # Maximum portfolio entries written per user per pipeline run.
+    # After threshold filtering, only the top-N scoring chats per user are kept.
+    max_entries_per_user_per_run: int = 3
 
 
 _settings: Settings | None = None

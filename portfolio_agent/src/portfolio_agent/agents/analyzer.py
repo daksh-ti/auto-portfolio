@@ -170,3 +170,39 @@ def threshold_gate_node(state: PortfolioState, deps: Deps) -> PortfolioState:
             "qualifying_count": len(qualifying),
         },
     }
+
+
+def top_k_gate_node(state: PortfolioState, deps: Deps) -> PortfolioState:
+    """
+    Per-user cap: keep only the top-N highest-scoring chats per user.
+
+    Applied after threshold filtering so we never write more than
+    max_entries_per_user_per_run entries per user per pipeline run, preventing
+    docs from growing unboundedly when many chats clear the score threshold.
+    """
+    k = deps.settings.max_entries_per_user_per_run
+    by_user: dict[str, list[AnalyzedChat]] = {}
+    for c in state["qualifying_chats"]:
+        by_user.setdefault(c.user_id, []).append(c)
+
+    selected: list[AnalyzedChat] = []
+    for user_id, chats in by_user.items():
+        top = sorted(chats, key=lambda x: x.overall_score, reverse=True)[:k]
+        selected.extend(top)
+
+    dropped = len(state["qualifying_chats"]) - len(selected)
+    log.info(
+        "top_k_gate.done",
+        run_id=state["run_id"],
+        max_per_user=k,
+        selected=len(selected),
+        dropped=dropped,
+    )
+    return {
+        "qualifying_chats": selected,
+        "metrics": {
+            **state.get("metrics", {}),
+            "top_k_selected": len(selected),
+            "top_k_dropped": dropped,
+        },
+    }

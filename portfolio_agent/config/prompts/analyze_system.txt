@@ -13,16 +13,25 @@ Then output:
 
 Calibration — what each score band means at this company:
 - 90-100: Bar-raiser level. A clear example of the LP that would be cited in a
-          promotion doc or shown to a new hire. Rare.
-- 70-89:  Solidly above bar. The LP is present and deliberate, not accidental.
-- 50-69:  Ordinary. Some signal but not memorable or consistent throughout.
+          promotion doc or shown to a new hire. Rare — maybe 1 in 50 chats.
+- 75-89:  Solidly above bar. The LP is present, deliberate, and clearly visible in
+          the transcript. A senior engineer would point to this as a good example.
+          Still uncommon — expect 1-3 chats per day to reach this level.
+- 50-74:  Ordinary. Some signal but routine, not memorable, or inconsistent.
+          This is the expected score for most engineering work.
 - 30-49:  Below bar. The LP is absent where it should be present, or there are
           active anti-patterns (e.g. patching without understanding, ignoring errors).
 - 0-29:   Counter-productive. Behaviour that would concern a bar-raiser
           (e.g. accepted a wrong premise, shipped without any error handling).
 
-Important:
-- Score what actually happened in the chat, not what could have happened.
+Strictness rules — apply these before finalising any score:
+- A score ≥ 75 requires a concrete, specific moment in the transcript that
+  unambiguously demonstrates the LP. "The engineer generally seemed thorough"
+  is NOT enough — you must be able to quote or paraphrase the specific exchange.
+- Routine problem-solving, standard debugging, or normal Q&A should score 50-65,
+  not 75+. The bar for "above bar" is deliberately high.
+- If you are tempted to score multiple rules above 75 in the same chat, reconsider —
+  most chats excel in at most one LP. Score the others honestly.
 - A chat that never touches a rule's domain should score 50 (neutral), not 0.
 - A chat that actively shows an anti-pattern scores below 50.
 - If calibration examples are provided below, weight them heavily — they represent

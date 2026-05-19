@@ -29,20 +29,16 @@ _DIVIDER_THICK = "═" * 60
 # ---------------------------------------------------------------------------
 
 def render_entry_block(e: PortfolioEntry) -> str:
-    top_rules = sorted(e.rule_scores, key=lambda r: r.score * r.weight, reverse=True)[:3]
-    rules_lines = "\n".join(
-        f"  • {r.rule_name} ({r.score}/100): {r.justification}"
-        for r in top_rules
-    )
+    highlights = "\n".join(f'  > "{h}"' for h in e.user_highlights)
     return (
         f"{e.conversation_title}     [Score: {e.overall_score}/100]\n"
         f"{_DIVIDER_THIN}\n"
-        f"Conversation:\n"
-        f"{e.conversation_markdown}\n"
-        f"{_DIVIDER_THIN}\n"
+        f"What you did:\n"
+        f"{highlights}\n\n"
+        f"What the assistant contributed:\n"
+        f"  {e.assistant_summary}\n\n"
         f"Why this matters:\n"
         f"{e.why_it_matters}\n\n"
-        f"Top signals:\n{rules_lines}\n\n"
         f"Source: {e.citation}\n"
         f"{_DIVIDER_THICK}\n\n"
     )

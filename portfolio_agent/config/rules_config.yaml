@@ -1,5 +1,5 @@
 version: 2
-threshold: 60
+threshold: 75
 
 # ---------------------------------------------------------------------------
 # Pre-processing filters

@@ -21,6 +21,16 @@ log = structlog.get_logger()
 
 class GenerateOutput(BaseModel):
     conversation_title: str = Field(min_length=6, max_length=80)
+    user_highlights: list[str] = Field(
+        min_length=1,
+        max_length=4,
+        description="2-4 key user messages — paraphrased or lightly quoted, ≤80 words each. No assistant content.",
+    )
+    assistant_summary: str = Field(
+        min_length=20,
+        max_length=200,
+        description="1-2 sentences summarising what the assistant contributed.",
+    )
     why_it_matters: str = Field(min_length=80, max_length=800)
 
 
@@ -55,7 +65,8 @@ async def _generate_one(
         user_email=c.user_email,
         overall_score=c.overall_score,
         conversation_title=out.conversation_title,
-        conversation_markdown=chat_text,
+        user_highlights=out.user_highlights,
+        assistant_summary=out.assistant_summary,
         why_it_matters=out.why_it_matters,
         citation=(
             f"chat_id={c.chat_id} · started "
