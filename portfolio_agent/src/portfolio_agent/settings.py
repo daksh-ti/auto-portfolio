@@ -1,9 +1,14 @@
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Resolve paths relative to this file so the CLI works from any working directory.
+_HERE = Path(__file__).parent
+_BASE_DIR = (_HERE / "../../").resolve()  # .../src/portfolio_agent/ -> .../portfolio_agent/
+_ENV_FILE = _BASE_DIR / ".env"
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="PA_")
+    model_config = SettingsConfigDict(env_file=str(_ENV_FILE), env_prefix="PA_")
 
     # ---- OpenAI ----
     openai_api_key: str
@@ -36,9 +41,9 @@ class Settings(BaseSettings):
     portfolio_window_hours: int = 24
 
     # ---- Config files ----
-    rules_config_path: Path = Path("config/rules_config.yaml")
-    reviewers_path: Path = Path("config/reviewers.yaml")
-    prompts_dir: Path = Path("config/prompts")
+    rules_config_path: Path = _BASE_DIR / "config/rules_config.yaml"
+    reviewers_path: Path = _BASE_DIR / "config/reviewers.yaml"
+    prompts_dir: Path = _BASE_DIR / "config/prompts"
 
     # ---- Email notifications ----
     notifications_enabled: bool = False
