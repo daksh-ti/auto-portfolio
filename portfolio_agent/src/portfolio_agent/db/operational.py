@@ -65,6 +65,14 @@ class OperationalRepo:
             )
             return [row[0] for row in result]
 
+    async def list_docs_with_users(self) -> list[tuple[str, str]]:
+        """Return [(doc_id, user_email)] for all known portfolio docs."""
+        async with self._engine.connect() as conn:
+            result = await conn.execute(
+                text("SELECT doc_id, user_email FROM portfolio_agent.gdoc_index")
+            )
+            return [(row[0], row[1]) for row in result]
+
     async def update_last_checked(self, doc_id: str) -> None:
         async with self._engine.begin() as conn:
             await conn.execute(
@@ -274,7 +282,8 @@ class OperationalRepo:
                     ) VALUES (
                         :comment_id, :doc_id, :anchor, :chat_id,
                         :author_email, :author_name, :quoted, :body,
-                        :target, :sentiment, :rule_ids::jsonb, :deltas::jsonb,
+                        :target, :sentiment,
+                        CAST(:rule_ids AS jsonb), CAST(:deltas AS jsonb),
                         :takeaway, :created_at
                     )
                     ON CONFLICT (comment_id) DO NOTHING
@@ -314,7 +323,7 @@ class OperationalRepo:
                 text("""
                     INSERT INTO portfolio_agent.rules_pending_changes
                         (rule_id, current_weight, proposed_weight, driving_comment_ids)
-                    VALUES (:rid, :cw, :pw, :cids::jsonb)
+                    VALUES (:rid, :cw, :pw, CAST(:cids AS jsonb))
                 """),
                 {
                     "rid": rule_id,

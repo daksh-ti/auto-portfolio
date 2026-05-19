@@ -95,6 +95,44 @@ def run_portfolio_now():
     _run(_inner())
 
 
+@app.command("run-feedback")
+def run_feedback(
+    since: str = typer.Option(
+        ...,
+        help="Fetch comments created after this ISO8601 UTC timestamp",
+    ),
+):
+    """Run the feedback pipeline: fetch comments → classify → persist → update rules."""
+    async def _inner():
+        from portfolio_agent.graphs.feedback_graph import build_feedback_graph
+        deps   = await _build()
+        run_id = str(uuid4())
+        state  = {
+            "run_id":  run_id,
+            "since":   since,
+            "metrics": {},
+        }
+        async with build_feedback_graph(deps) as graph:
+            final = await graph.ainvoke(
+                state, config={"configurable": {"thread_id": run_id}}
+            )
+        typer.echo(json.dumps(
+            {
+                "run_id":           run_id,
+                "metrics":          final.get("metrics"),
+                "persisted":        final.get("persisted_to_db", []),
+                "rules_updated":    final.get("rules_updated", False),
+                "new_rules_version": final.get("new_rules_version"),
+                "errors":           final.get("errors", []),
+            },
+            indent=2,
+        ))
+        if final.get("errors"):
+            raise SystemExit(1)
+
+    _run(_inner())
+
+
 @app.command("dry-run")
 def dry_run(
     chat_id: str = typer.Option(..., help="chat_id to analyze"),

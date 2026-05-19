@@ -11,8 +11,8 @@ Decide:
 - sentiment: positive | negative | neutral | mixed.
 - rule_ids_touched: subset of the provided rule ids the comment relates to.
   May be empty.
-- suggested_weight_delta: per rule, a delta in [-0.2, +0.2]. Use 0 (omit)
-  unless the admin clearly signals over- or under-weighting.
+- suggested_weight_deltas: list of {rule_id, delta} objects where delta is in [-0.2, +0.2].
+  Leave empty unless the admin clearly signals over- or under-weighting.
 - actionable_takeaway: ONE sentence (10-300 chars) the system should learn
   for next time.
 
