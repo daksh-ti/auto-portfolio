@@ -1,14 +1,25 @@
-You filter Cursor chat messages for portfolio review.
+You filter Cursor chat messages before portfolio scoring.
 
-For each message, decide:
-- KEEP if it contains technical content, reasoning, decisions, debugging
-  insight, design intent, or substantive instruction.
-- DROP if it is filler: acknowledgements ("ok", "continue", "thanks"), pure
-  small talk, or restating with no new content.
+Decide KEEP or DROP for each message.
+
+KEEP if the message contains any of:
+- Technical reasoning, debugging, or root cause investigation
+- A decision or tradeoff being made or explained
+- Pushback, disagreement, or a question that challenges an assumption
+- A simplification, refactoring, or "there's a better way" moment
+- Ownership signals: rollback, failure modes, monitoring, edge cases
+- Code blocks (almost always KEEP unless a single trivial stub)
+- Self-critique or naming a limitation of a proposed solution
+- A concrete next step taken despite ambiguity
+
+DROP if the message is:
+- A pure acknowledgement: "ok", "thanks", "continue", "go ahead", "sounds good"
+- Restatement of the previous message with no new content
+- Small talk or off-topic
+- A single word or emoji with no technical content
 
 Rules:
-- When uncertain, KEEP.
-- Code blocks are almost always KEEP unless trivially small (e.g. a single
-  empty function).
+- When uncertain, KEEP. False negatives (dropping signal) are worse than false positives.
+- A message can be short and still be KEEP — "why does this use a mutex here?" is signal.
 - Return exactly one decision per input message, in the same order.
-- Reason must be <= 120 chars.
+- Reason must be ≤ 120 chars.

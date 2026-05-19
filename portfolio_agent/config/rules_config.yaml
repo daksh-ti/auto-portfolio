@@ -1,5 +1,9 @@
-version: 1
+version: 2
 threshold: 60
+
+# ---------------------------------------------------------------------------
+# Pre-processing filters
+# ---------------------------------------------------------------------------
 preprocess:
   min_chat_length_chars: 200
   min_messages_after_filter: 2
@@ -23,52 +27,152 @@ preprocess:
     - "n"
   drop_if_shorter_than_chars: 8
   keep_if_contains_code_block: true
+
+# ---------------------------------------------------------------------------
+# Scoring rules — mapped to Amazon Leadership Principles
+#
+# Weighted score formula:
+#   raw_score(rule) = LLM score (0-100)
+#   weighted_score(rule) = raw_score * weight
+#   overall_score = sum(weighted_scores) / sum(weights)   [normalised to 0-100]
+#
+# A chat qualifies for portfolio if overall_score >= threshold (60).
+# ---------------------------------------------------------------------------
 rules:
-  - id: culture.curiosity
-    name: "Curiosity & Learning"
-    weight: 1.0
+  - id: lp.dive_deep
+    name: "Dive Deep"
+    weight: 1.3
     description: >
-      Engineer explores tradeoffs, asks "why", reads docs, or learns a new
-      pattern instead of pattern-matching past solutions.
+      Engineer operates at the level of detail the problem demands. Investigates
+      root cause before patching. Questions why something behaves the way it does.
+      Reads source, traces call chains, or runs experiments rather than guessing.
+      Does not stop at the first plausible answer.
     positive_signals:
-      - "asks clarifying questions before coding"
-      - "explores multiple approaches"
-      - "investigates root cause"
+      - "asks why the error happens before writing the fix"
+      - "reads library source or docs to understand behaviour"
+      - "traces the full call chain or execution path"
+      - "runs a targeted experiment to validate an assumption"
+      - "distinguishes root cause from symptom"
     negative_signals:
-      - "copies blindly without reading"
-      - "stops at first plausible answer"
-  - id: culture.ownership
+      - "applies patch without understanding cause"
+      - "accepts first LLM suggestion without validation"
+      - "surface-level debugging (try-catch and ignore)"
+      - "assumes rather than verifies"
+
+  - id: lp.ownership
     name: "Ownership"
     weight: 1.2
-    description: "Engineer takes responsibility end-to-end, including edge cases and follow-ups."
+    description: >
+      Engineer thinks end-to-end and long-term. Considers deployment, rollback,
+      monitoring, and failure modes without being asked. Follows through on cleanup.
+      Acts on problems noticed in passing. Does not hand off responsibility at the
+      boundary of their immediate task.
     positive_signals:
-      - "considers rollback / monitoring"
-      - "follows through on cleanup"
+      - "raises or handles failure modes unprompted"
+      - "considers rollback or migration safety"
+      - "adds observability (logging, metrics, alerts)"
+      - "follows through on a cleanup noticed in passing"
+      - "thinks about production impact, not just local correctness"
     negative_signals:
-      - "leaves TODOs without context"
-      - "stops at happy path"
-  - id: craft.rigor
-    name: "Engineering Rigor"
+      - "leaves TODOs without context or owner"
+      - "stops at the happy path"
+      - "ignores failure modes when they are obvious"
+      - "treats monitoring or rollback as someone else's problem"
+
+  - id: lp.invent_simplify
+    name: "Invent and Simplify"
     weight: 1.0
-    description: "Tests, edge cases, error handling, observability."
+    description: >
+      Engineer finds the simpler solution. Removes unnecessary complexity, challenges
+      abstractions that don't earn their keep, and reaches for built-ins or existing
+      libraries before writing new code. Avoids gold-plating and over-engineering.
+      Proposes creative approaches that others would not have considered.
     positive_signals:
-      - "adds or discusses tests"
-      - "handles errors deliberately"
-      - "adds logging/metrics"
+      - "replaces complex custom code with a stdlib or library equivalent"
+      - "removes an abstraction layer that was adding no value"
+      - "proposes a 5-line solution where the obvious answer was 40 lines"
+      - "identifies the simplest change that achieves the goal"
+      - "avoids premature abstraction or speculative generality"
     negative_signals:
-      - "ignores errors"
-      - "no test discussion in non-trivial change"
-  - id: collaboration.communication
-    name: "Communication"
+      - "introduces abstraction for hypothetical future use cases"
+      - "re-implements something the standard library already provides"
+      - "adds configuration knobs that will never be changed"
+      - "over-engineers a solution to a simple, well-scoped problem"
+
+  - id: lp.highest_standards
+    name: "Insist on the Highest Standards"
+    weight: 1.1
+    description: >
+      Engineer raises the bar rather than accepting 'good enough'. Writes or
+      discusses tests. Handles errors deliberately and specifically. Adds structured
+      logging or metrics. Catches edge cases proactively. Reviews their own output
+      critically before considering work done.
+    positive_signals:
+      - "writes or proposes a test before or alongside the fix"
+      - "handles specific error types rather than catching everything"
+      - "adds structured logging with meaningful context fields"
+      - "identifies an edge case the original spec missed"
+      - "critiques their own solution and names its limitations"
+    negative_signals:
+      - "ignores or swallows error paths"
+      - "no test discussion on a non-trivial change"
+      - "ships without considering observability"
+      - "accepts output without critically reviewing it"
+
+  - id: lp.bias_for_action
+    name: "Bias for Action"
+    weight: 0.9
+    description: >
+      Engineer makes progress despite ambiguity. Recognises when a decision is
+      reversible and just moves rather than over-planning. Ships an incremental,
+      working step rather than waiting for the perfect spec. Takes calculated risks
+      and unblocks themselves without waiting for permission.
+    positive_signals:
+      - "identifies what is unknown but proceeds with a reversible first step"
+      - "ships a minimal working version rather than gold-plating"
+      - "makes a low-stakes decision independently rather than escalating"
+      - "unblocks themselves by trying rather than asking"
+    negative_signals:
+      - "asks clarifying questions answerable by just trying it"
+      - "paralysis on a low-stakes reversible decision"
+      - "waits for perfect information before taking any step"
+      - "over-plans a simple, time-boxed task"
+
+  - id: lp.earn_trust
+    name: "Earn Trust"
     weight: 0.8
-    description: "Clear, well-structured prompts and explanations."
+    description: >
+      Engineer is transparent about uncertainty, names tradeoffs explicitly, and
+      pushes back with reasoning when a direction seems wrong. Acknowledges
+      limitations of their own solution honestly. Does not agree with an incorrect
+      premise just to avoid friction.
     positive_signals:
-      - "concrete, scoped prompts"
-      - "summarizes decisions"
+      - "names the tradeoff rather than presenting one option as obviously correct"
+      - "explicitly states what the chosen approach does not handle"
+      - "disagrees with a proposed direction and explains the reasoning"
+      - "acknowledges uncertainty rather than projecting false confidence"
+      - "is vocally self-critical about their own solution's weaknesses"
     negative_signals:
-      - "vague, one-word prompts on complex tasks"
+      - "agrees with an incorrect premise without pushback"
+      - "presents a solution without acknowledging known limitations"
+      - "overstates confidence in an unvalidated approach"
+      - "avoids naming a tradeoff that is clearly present"
+
+# ---------------------------------------------------------------------------
+# Changelog — append an entry every time rules or weights are changed
+# ---------------------------------------------------------------------------
 changelog:
   - version: 1
     at: "2026-05-19T00:00:00Z"
     reason: "Initial ruleset."
     changes: []
+  - version: 2
+    at: "2026-05-19T00:00:00Z"
+    reason: "Replaced generic engineering rules with Amazon Leadership Principle-mapped rules for higher scoring consistency and cultural alignment."
+    changes:
+      - "Replaced culture.curiosity with lp.dive_deep (weight 1.3)"
+      - "Replaced craft.rigor with lp.highest_standards (weight 1.1)"
+      - "Replaced collaboration.communication with lp.earn_trust (weight 0.8)"
+      - "Added lp.invent_simplify (weight 1.0)"
+      - "Added lp.bias_for_action (weight 0.9)"
+      - "Kept lp.ownership (weight 1.2, was culture.ownership)"
