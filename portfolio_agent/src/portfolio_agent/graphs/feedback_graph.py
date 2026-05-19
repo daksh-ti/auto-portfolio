@@ -1,10 +1,18 @@
+"""
+Feedback graph — no checkpointer needed.
+
+The feedback pipeline is a linear, single-shot sweep: fetch → classify →
+route → persist → update_rules. There is no long-running work to resume, so
+checkpointing adds overhead and can cause stale state bleed between runs when
+the Postgres saver restores channel values from prior threads. We compile
+without a checkpointer.
+"""
 from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import END, START, StateGraph
 
 from portfolio_agent.agents.feedback import (
@@ -31,7 +39,7 @@ def _curry(fn, deps: Deps):
         return _sync_inner
 
 
-def _compiled_graph(deps: Deps, checkpointer=None):
+def _build_graph(deps: Deps):
     g: StateGraph = StateGraph(FeedbackState)
 
     g.add_node("fetch_comments",      _curry(fetch_comments_node, deps))
@@ -51,23 +59,10 @@ def _compiled_graph(deps: Deps, checkpointer=None):
     g.add_edge("persist_feedback",    "update_rules_config")
     g.add_edge("update_rules_config", END)
 
-    return g.compile(checkpointer=checkpointer)
+    return g.compile()   # no checkpointer
 
 
 @asynccontextmanager
 async def build_feedback_graph(deps: Deps) -> AsyncIterator:
-    """
-    Async context manager that owns the Postgres checkpointer lifetime.
-
-    Usage:
-        async with build_feedback_graph(deps) as graph:
-            await graph.ainvoke(state, ...)
-    """
-    conn_str = (
-        deps.settings.operational_db_url
-        .replace("postgresql+psycopg://", "postgresql://")
-        .replace("postgresql+psycopg2://", "postgresql://")
-    )
-    async with AsyncPostgresSaver.from_conn_string(conn_str) as checkpointer:
-        await checkpointer.setup()
-        yield _compiled_graph(deps, checkpointer=checkpointer)
+    """Yield a compiled feedback graph (no checkpointer — single-shot pipeline)."""
+    yield _build_graph(deps)

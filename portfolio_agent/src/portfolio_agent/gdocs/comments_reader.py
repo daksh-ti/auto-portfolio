@@ -112,13 +112,13 @@ async def fetch_comments_node(state: FeedbackState, deps: Deps) -> FeedbackState
                     anchor_id, chat_id = resolve_anchor(
                         r.get("anchor"), named_ranges, entries_in_doc
                     )
-                    # Drive may omit emailAddress due to privacy settings; fall back
-                # to the doc owner's email (the user who owns this portfolio doc).
-                author_email = (
-                    r["author"].get("emailAddress")
-                    or user_email
-                )
-                all_comments.append(
+                    # Drive may omit emailAddress due to privacy settings;
+                    # fall back to the doc owner's email.
+                    author_email = (
+                        r["author"].get("emailAddress")
+                        or user_email
+                    )
+                    all_comments.append(
                         CommentRecord(
                             comment_id=r["id"],
                             google_doc_id=doc_id,

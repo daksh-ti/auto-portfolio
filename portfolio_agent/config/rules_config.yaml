@@ -169,10 +169,4 @@ changelog:
   - version: 2
     at: "2026-05-19T00:00:00Z"
     reason: "Replaced generic engineering rules with Amazon Leadership Principle-mapped rules for higher scoring consistency and cultural alignment."
-    changes:
-      - "Replaced culture.curiosity with lp.dive_deep (weight 1.3)"
-      - "Replaced craft.rigor with lp.highest_standards (weight 1.1)"
-      - "Replaced collaboration.communication with lp.earn_trust (weight 0.8)"
-      - "Added lp.invent_simplify (weight 1.0)"
-      - "Added lp.bias_for_action (weight 0.9)"
-      - "Kept lp.ownership (weight 1.2, was culture.ownership)"
+    changes: []

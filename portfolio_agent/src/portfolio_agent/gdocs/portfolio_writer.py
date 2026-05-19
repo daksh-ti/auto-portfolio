@@ -48,36 +48,42 @@ def render_entry_block(e: PortfolioEntry) -> str:
     )
 
 
-def build_entry_requests(entries: list[PortfolioEntry]) -> list[dict]:
+def build_entry_requests(entries: list[PortfolioEntry], doc_end_index: int) -> list[dict]:
     """
-    batchUpdate requests to insert all entries at the top of the doc (index 1),
-    newest first. Inserting in reverse order achieves this because each
-    insertion pushes prior content down.
+    batchUpdate requests to append all entries at the end of the doc, oldest first.
+
+    Entries are written in chronological order (oldest first) so the doc reads
+    as a natural timeline. Each entry advances the cursor for the next one —
+    no existing content is shifted.
 
     Per entry: insertText + createNamedRange + HEADING_2 on title line.
     """
     requests: list[dict] = []
-    for e in reversed(entries):
+    cursor = doc_end_index
+
+    for e in sorted(entries, key=lambda x: x.generated_at):
         block     = render_entry_block(e)
-        end_idx   = 1 + len(block)
-        title_end = 1 + len(e.conversation_title) + 1
+        end_idx   = cursor + len(block)
+        title_end = cursor + len(e.conversation_title) + 1
 
         requests.append({
-            "insertText": {"location": {"index": 1}, "text": block}
+            "insertText": {"location": {"index": cursor}, "text": block}
         })
         requests.append({
             "createNamedRange": {
                 "name": f"entry_{e.chat_id}",
-                "range": {"startIndex": 1, "endIndex": end_idx},
+                "range": {"startIndex": cursor, "endIndex": end_idx},
             }
         })
         requests.append({
             "updateParagraphStyle": {
-                "range": {"startIndex": 1, "endIndex": title_end},
+                "range": {"startIndex": cursor, "endIndex": title_end},
                 "paragraphStyle": {"namedStyleType": "HEADING_2"},
                 "fields": "namedStyleType",
             }
         })
+        cursor = end_idx
+
     return requests
 
 
@@ -137,8 +143,9 @@ async def write_to_gdoc_node(state: PortfolioState, deps: Deps) -> PortfolioStat
                 user_email=email, year_month=ym, creator=_creator,
             )
 
-            # 6. Write all entries in one batchUpdate call.
-            requests = build_entry_requests(entries)
+            # 6. Write all entries in one batchUpdate call, appended at the end.
+            doc_end = gdocs.get_doc_end_index(doc_id)
+            requests = build_entry_requests(entries, doc_end_index=doc_end)
             gdocs.batch_update(doc_id, requests)
 
             # 7. Record each entry in the operational DB.

@@ -63,9 +63,7 @@ async def run_feedback(graph, deps) -> None:
     }
     log.info("feedback.run.start", run_id=run_id, since=state["since"])
     try:
-        final = await graph.ainvoke(
-            state, config={"configurable": {"thread_id": run_id}}
-        )
+        final = await graph.ainvoke(state)
         log.info("feedback.run.done", run_id=run_id, metrics=final.get("metrics"))
         if deps.settings.slack_webhook_url:
             _notify_slack(deps.settings.slack_webhook_url, _feedback_summary(run_id, final))

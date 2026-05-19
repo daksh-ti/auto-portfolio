@@ -113,9 +113,7 @@ def run_feedback(
             "metrics": {},
         }
         async with build_feedback_graph(deps) as graph:
-            final = await graph.ainvoke(
-                state, config={"configurable": {"thread_id": run_id}}
-            )
+            final = await graph.ainvoke(state)
         typer.echo(json.dumps(
             {
                 "run_id":           run_id,
