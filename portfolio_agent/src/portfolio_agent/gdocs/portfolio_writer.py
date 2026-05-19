@@ -142,6 +142,7 @@ async def write_to_gdoc_node(state: PortfolioState, deps: Deps) -> PortfolioStat
             gdocs.batch_update(doc_id, requests)
 
             # 7. Record each entry in the operational DB.
+            written_this_user: list[PortfolioEntry] = []
             for e in entries:
                 anchor = f"entry_{e.chat_id}"
                 e.google_doc_id   = doc_id
@@ -151,11 +152,20 @@ async def write_to_gdoc_node(state: PortfolioState, deps: Deps) -> PortfolioStat
                     anchor_id=anchor, overall_score=e.overall_score,
                 )
                 written.append(e)
+                written_this_user.append(e)
 
             log.info(
                 "write.doc_done",
                 run_id=state["run_id"],
                 email=email, ym=ym, doc_id=doc_id, entries=len(entries),
+            )
+
+            # Notify the user about their new portfolio entries.
+            await deps.notifier.send_portfolio_digest(
+                user_email=email,
+                entries=written_this_user,
+                doc_id=doc_id,
+                year_month=ym,
             )
 
         except Exception as ex:

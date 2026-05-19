@@ -7,6 +7,7 @@ from portfolio_agent.db.engine import build_engines
 from portfolio_agent.db.operational import OperationalRepo
 from portfolio_agent.db.users import UsersRepo
 from portfolio_agent.llm import LLMClient
+from portfolio_agent.notifications import EmailNotifier
 from portfolio_agent.settings import Settings, get_settings
 
 
@@ -16,6 +17,7 @@ class Deps:
     chat_repo: ChatRepo
     users_repo: UsersRepo
     ops_repo: OperationalRepo
+    notifier: EmailNotifier
     # No global gdocs client — each user gets their own in portfolio_writer.py
     llm_preprocess: LLMClient
     llm_analyze: LLMClient
@@ -42,6 +44,7 @@ async def build_deps() -> Deps:
         chat_repo=ChatRepo(source_eng),
         users_repo=UsersRepo(source_eng),  # same engine — different tables, same DB
         ops_repo=OperationalRepo(ops_eng),
+        notifier=EmailNotifier(s),
         llm_preprocess=_llm(s.openai_model_preprocess, s.openai_temperature_preprocess),
         llm_analyze=_llm(s.openai_model_analyze, s.openai_temperature_analyze),
         llm_generate=_llm(s.openai_model_generate, s.openai_temperature_generate),

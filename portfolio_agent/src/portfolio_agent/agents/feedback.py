@@ -205,10 +205,6 @@ async def update_rules_config_node(state: FeedbackState, deps: Deps) -> Feedback
             sums[rid] = sums.get(rid, 0.0) + d
             driving.setdefault(rid, []).append(f.comment.comment_id)
 
-    if not sums:
-        log.info("update_rules_config.no_changes", run_id=state.get("run_id"))
-        return {"rules_updated": False, "new_rules_version": None}
-
     applied: dict[str, float]   = {}
     pending: dict[str, float]   = {}
     max_delta   = deps.settings.max_weight_delta_per_run
@@ -244,41 +240,72 @@ async def update_rules_config_node(state: FeedbackState, deps: Deps) -> Feedback
             proposed=proposed,
         )
 
-    if not applied:
-        return {"rules_updated": False, "new_rules_version": None}
+    rules_updated   = False
+    new_version     = None
+    # old_weights used to build applied_deltas for the notification
+    old_weights     = {r.id: r.weight for r in rc.rules}
 
-    # Auto-apply small changes.
-    new_rc = apply_weight_deltas(
-        rc,
-        applied,
-        driving_comment_ids=driving,
-        reason=f"Auto-applied from feedback run {state.get('run_id', 'unknown')}.",
-        weight_min=deps.settings.weight_min,
-        weight_max=deps.settings.weight_max,
-    )
-    save_rules(deps.settings.rules_config_path, new_rc)
-    log.info(
-        "update_rules_config.applied",
-        run_id=state.get("run_id"),
-        deltas=applied,
-        new_version=new_rc.version,
-    )
-
-    if deps.settings.rules_git_repo_path:
-        from portfolio_agent.rules import git_commit
-        try:
-            git_commit(
-                deps.settings.rules_git_repo_path,
-                message=f"rules: v{new_rc.version}; deltas={applied}",
-            )
-        except Exception as ex:
-            log.warning("update_rules_config.git_commit_failed", err=repr(ex))
-
-    if deps.settings.slack_webhook_url:
-        from portfolio_agent.scheduler import _notify_slack
-        _notify_slack(
-            deps.settings.slack_webhook_url,
-            text=f"rules_config v{new_rc.version} applied: {applied}",
+    if applied:
+        # Auto-apply small changes.
+        new_rc = apply_weight_deltas(
+            rc,
+            applied,
+            driving_comment_ids=driving,
+            reason=f"Auto-applied from feedback run {state.get('run_id', 'unknown')}.",
+            weight_min=deps.settings.weight_min,
+            weight_max=deps.settings.weight_max,
+        )
+        save_rules(deps.settings.rules_config_path, new_rc)
+        rules_updated = True
+        new_version   = new_rc.version
+        log.info(
+            "update_rules_config.applied",
+            run_id=state.get("run_id"),
+            deltas=applied,
+            new_version=new_rc.version,
         )
 
-    return {"rules_updated": True, "new_rules_version": new_rc.version}
+        if deps.settings.rules_git_repo_path:
+            from portfolio_agent.rules import git_commit
+            try:
+                git_commit(
+                    deps.settings.rules_git_repo_path,
+                    message=f"rules: v{new_rc.version}; deltas={applied}",
+                )
+            except Exception as ex:
+                log.warning("update_rules_config.git_commit_failed", err=repr(ex))
+
+        if deps.settings.slack_webhook_url:
+            from portfolio_agent.scheduler import _notify_slack
+            _notify_slack(
+                deps.settings.slack_webhook_url,
+                text=f"rules_config v{new_rc.version} applied: {applied}",
+            )
+    else:
+        log.info("update_rules_config.no_changes", run_id=state.get("run_id"))
+
+    # Send per-author feedback digest emails.
+    # Build applied_deltas as {rule_id: (old_weight, new_weight)} for the email.
+    applied_deltas_for_email = {
+        rid: (old_weights[rid], old_weights[rid] + delta)
+        for rid, delta in applied.items()
+        if rid in old_weights
+    }
+    # Group classified comments by author email and notify each author.
+    by_author: dict[str, list] = {}
+    for f in classified:
+        by_author.setdefault(f.comment.author_email, []).append(f)
+
+    for author_email, author_classified in by_author.items():
+        if not author_email:
+            continue
+        await deps.notifier.send_feedback_digest(
+            user_email=author_email,
+            classified=author_classified,
+            rules_updated=rules_updated,
+            new_rules_version=new_version,
+            applied_deltas=applied_deltas_for_email,
+            pending_rule_ids=list(pending.keys()),
+        )
+
+    return {"rules_updated": rules_updated, "new_rules_version": new_version}
