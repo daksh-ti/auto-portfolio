@@ -1,0 +1,4 @@
+Messages:
+{% for i, m in messages %}
+[{{ i }}] ({{ m.role }}): {{ m.content[:600] }}{% if m.content | length > 600 %}…{% endif %}
+{% endfor %}

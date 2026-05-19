@@ -1,0 +1,19 @@
+Rules:
+{% for r in rules %}
+- id: {{ r.id }}
+  name: {{ r.name }}
+  weight: {{ r.weight }}
+  description: {{ r.description }}
+  positive_signals: {{ r.positive_signals }}
+  negative_signals: {{ r.negative_signals }}
+{% endfor %}
+
+{% if calibration_examples %}
+Calibration examples (admin feedback on prior analyses):
+{% for ex in calibration_examples %}
+- chat {{ ex.chat_id }}: "{{ ex.comment_body }}" ({{ ex.sentiment }}) — takeaway: {{ ex.takeaway }}
+{% endfor %}
+{% endif %}
+
+Chat:
+{{ chat_text }}

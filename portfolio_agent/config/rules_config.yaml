@@ -1,0 +1,74 @@
+version: 1
+threshold: 60
+preprocess:
+  min_chat_length_chars: 200
+  min_messages_after_filter: 2
+  drop_phrases_exact:
+    - "continue"
+    - "go on"
+    - "go ahead"
+    - "let's go"
+    - "lets go"
+    - "ok"
+    - "okay"
+    - "thanks"
+    - "thank you"
+    - "ty"
+    - "cool"
+    - "nice"
+    - "perfect"
+    - "yes"
+    - "no"
+    - "y"
+    - "n"
+  drop_if_shorter_than_chars: 8
+  keep_if_contains_code_block: true
+rules:
+  - id: culture.curiosity
+    name: "Curiosity & Learning"
+    weight: 1.0
+    description: >
+      Engineer explores tradeoffs, asks "why", reads docs, or learns a new
+      pattern instead of pattern-matching past solutions.
+    positive_signals:
+      - "asks clarifying questions before coding"
+      - "explores multiple approaches"
+      - "investigates root cause"
+    negative_signals:
+      - "copies blindly without reading"
+      - "stops at first plausible answer"
+  - id: culture.ownership
+    name: "Ownership"
+    weight: 1.2
+    description: "Engineer takes responsibility end-to-end, including edge cases and follow-ups."
+    positive_signals:
+      - "considers rollback / monitoring"
+      - "follows through on cleanup"
+    negative_signals:
+      - "leaves TODOs without context"
+      - "stops at happy path"
+  - id: craft.rigor
+    name: "Engineering Rigor"
+    weight: 1.0
+    description: "Tests, edge cases, error handling, observability."
+    positive_signals:
+      - "adds or discusses tests"
+      - "handles errors deliberately"
+      - "adds logging/metrics"
+    negative_signals:
+      - "ignores errors"
+      - "no test discussion in non-trivial change"
+  - id: collaboration.communication
+    name: "Communication"
+    weight: 0.8
+    description: "Clear, well-structured prompts and explanations."
+    positive_signals:
+      - "concrete, scoped prompts"
+      - "summarizes decisions"
+    negative_signals:
+      - "vague, one-word prompts on complex tasks"
+changelog:
+  - version: 1
+    at: "2026-05-19T00:00:00Z"
+    reason: "Initial ruleset."
+    changes: []

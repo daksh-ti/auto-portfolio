@@ -1,0 +1,16 @@
+Chat (verbatim):
+{{ chat_text }}
+
+Rule scores (highest weighted-contribution first):
+{% for s in top_rule_scores %}
+- {{ s.rule_name }} ({{ s.score }}/100, weight {{ s.weight }}): {{ s.justification }}
+{% endfor %}
+
+Overall score: {{ overall_score }}/100
+
+{% if calibration_examples %}
+Calibration examples (admin feedback on prior entries):
+{% for ex in calibration_examples %}
+- "{{ ex.comment_body }}" ({{ ex.sentiment }}) — takeaway: {{ ex.takeaway }}
+{% endfor %}
+{% endif %}

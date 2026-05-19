@@ -1,0 +1,14 @@
+Available rules:
+{% for r in rules %}- {{ r.id }}: {{ r.name }} (weight {{ r.weight }})
+{% endfor %}
+
+Comment metadata:
+- author: {{ author_name }} <{{ author_email }}>
+- created_at: {{ created_at }}
+- attached_to: {{ attached_to_hint }}
+
+quoted_text (what the comment is anchored to):
+{{ quoted_text or "(none)" }}
+
+comment body:
+{{ body }}

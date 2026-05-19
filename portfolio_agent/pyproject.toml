@@ -1,0 +1,65 @@
+[project]
+name = "cursor-portfolio-agent"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+  "langgraph>=0.2.60",
+  "langgraph-checkpoint-postgres>=2.0.7",
+  "langchain-core>=0.3.22,<0.4.0",
+  "langchain-openai>=0.2.10",
+  "openai>=1.55.0",
+  "pydantic>=2.9.2",
+  "pydantic-settings>=2.6.1",
+  "sqlalchemy>=2.0.36",
+  "psycopg[binary,pool]>=3.2.3",
+  "alembic>=1.14.0",
+  "google-api-python-client>=2.151.0",
+  "google-auth>=2.36.0",
+  "google-auth-httplib2>=0.2.0",
+  "google-auth-oauthlib>=1.2.1",
+  "apscheduler>=3.10.4",
+  "pyyaml>=6.0.2",
+  "jinja2>=3.1.4",
+  "tenacity>=9.0.0",
+  "structlog>=24.4.0",
+  "typer>=0.13.0",
+  "httpx>=0.27.2",
+  "typing-extensions>=4.8",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.3.3",
+  "pytest-asyncio==0.24.0",
+  "respx==0.21.1",
+  "ruff==0.7.4",
+  "mypy==1.13.0",
+  "hypothesis==6.119.4",
+]
+
+[project.scripts]
+portfolio-agent = "portfolio_agent.cli:app"
+cursor-portfolio-agent = "portfolio_agent.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/portfolio_agent"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
