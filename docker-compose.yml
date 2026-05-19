@@ -17,8 +17,8 @@ services:
 
     volumes:
       # Google OAuth client secret — read-only inside the container.
-      # Point HOST_GOOGLE_CLIENT_SECRETS_PATH to the file on your machine.
-      - ${HOST_GOOGLE_CLIENT_SECRETS_PATH:-./secrets/client_secret.json}:/secrets/client_secret.json:ro
+      # Default: portfolio_agent/client_secret.json (never commit this file).
+      - ${HOST_GOOGLE_CLIENT_SECRETS_PATH:-./portfolio_agent/client_secret.json}:/secrets/client_secret.json:ro
 
       # rules_config.yaml is written by the agent when weights are updated.
       # Mount the whole config directory so changes survive container restarts.
