@@ -25,6 +25,14 @@ import structlog
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 log = structlog.get_logger()
 
@@ -95,6 +103,39 @@ class TriggerResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# DB warmup + retry helpers (shared with scheduler.py logic)
+# ---------------------------------------------------------------------------
+
+async def _wait_for_db(engine, run_id: str, retries: int = 5) -> None:
+    for attempt in range(1, retries + 1):
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            if attempt > 1:
+                log.info("db.warmup.ok", run_id=run_id, attempt=attempt)
+            return
+        except OperationalError as exc:
+            if attempt == retries:
+                log.error("db.warmup.failed", run_id=run_id, err=repr(exc))
+                raise
+            wait = attempt * 2.0
+            log.warning("db.warmup.retry", run_id=run_id, attempt=attempt, wait_s=wait, err=repr(exc))
+            await asyncio.sleep(wait)
+
+
+def _make_retry_invoke(graph):
+    @retry(
+        retry=retry_if_exception_type(OperationalError),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=3, max=15),
+        reraise=True,
+    )
+    async def _invoke(state, **kwargs):
+        return await graph.ainvoke(state, **kwargs)
+    return _invoke
+
+
+# ---------------------------------------------------------------------------
 # Background job helpers (mirror scheduler.py logic)
 # ---------------------------------------------------------------------------
 
@@ -109,9 +150,9 @@ async def _run_portfolio(run_id: str, start: str, end: str) -> None:
     }
     log.info("api.portfolio.start", run_id=run_id, window_start=start, window_end=end)
     try:
-        final = await graph.ainvoke(
-            state, config={"configurable": {"thread_id": run_id}}
-        )
+        await _wait_for_db(deps.ops_repo._engine, run_id)
+        invoke = _make_retry_invoke(graph)
+        final  = await invoke(state, config={"configurable": {"thread_id": run_id}})
         log.info("api.portfolio.done", run_id=run_id, metrics=final.get("metrics"))
     except Exception as exc:
         log.error("api.portfolio.failed", run_id=run_id, err=repr(exc))
@@ -127,9 +168,9 @@ async def _run_feedback(run_id: str, since: str) -> None:
     }
     log.info("api.feedback.start", run_id=run_id, since=since)
     try:
-        final = await graph.ainvoke(
-            state, config={"configurable": {"thread_id": run_id}}
-        )
+        await _wait_for_db(deps.ops_repo._engine, run_id)
+        invoke = _make_retry_invoke(graph)
+        final  = await invoke(state)
         log.info("api.feedback.done", run_id=run_id, metrics=final.get("metrics"))
     except Exception as exc:
         log.error("api.feedback.failed", run_id=run_id, err=repr(exc))

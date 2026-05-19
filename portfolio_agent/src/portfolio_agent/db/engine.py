@@ -13,20 +13,16 @@ async def build_engines(s: Settings) -> tuple[AsyncEngine, AsyncEngine]:
     ops_eng     — connects to the DB hosting portfolio_agent.* operational schema.
                   Re-uses source_eng when both URLs are identical.
     """
-    source_eng = create_async_engine(
-        s.source_db_url,
+    _engine_kwargs = dict(
         pool_size=10,
         max_overflow=5,
-        pool_pre_ping=True,
+        pool_pre_ping=True,   # test connections before checkout; silently reconnects dead ones
+        pool_recycle=300,     # recycle connections held >5 min (prevents Neon idle-kill)
     )
+    source_eng = create_async_engine(s.source_db_url, **_engine_kwargs)
     ops_eng = (
         source_eng
         if s.operational_db_url == s.source_db_url
-        else create_async_engine(
-            s.operational_db_url,
-            pool_size=10,
-            max_overflow=5,
-            pool_pre_ping=True,
-        )
+        else create_async_engine(s.operational_db_url, **_engine_kwargs)
     )
     return source_eng, ops_eng

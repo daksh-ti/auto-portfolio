@@ -17,12 +17,66 @@ from uuid import uuid4
 
 import structlog
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from portfolio_agent.deps import build_deps
 from portfolio_agent.graphs.feedback_graph import build_feedback_graph
 from portfolio_agent.graphs.portfolio_graph import build_portfolio_graph
 
 log = structlog.get_logger()
+
+
+# ---------------------------------------------------------------------------
+# DB warmup — pings the DB before each job so Neon cold-starts are absorbed
+# here rather than mid-pipeline.
+# ---------------------------------------------------------------------------
+
+async def _wait_for_db(engine, run_id: str, retries: int = 5) -> None:
+    """
+    Fire a lightweight SELECT 1 to wake Neon before the pipeline touches any
+    real tables.  Retries with linear back-off (2 s, 4 s, 6 s …) so a
+    cold-start that takes ~10 s is handled transparently.
+    """
+    for attempt in range(1, retries + 1):
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            if attempt > 1:
+                log.info("db.warmup.ok", run_id=run_id, attempt=attempt)
+            return
+        except OperationalError as exc:
+            if attempt == retries:
+                log.error("db.warmup.failed", run_id=run_id, err=repr(exc))
+                raise
+            wait = attempt * 2.0
+            log.warning("db.warmup.retry", run_id=run_id, attempt=attempt, wait_s=wait, err=repr(exc))
+            await asyncio.sleep(wait)
+
+
+# ---------------------------------------------------------------------------
+# Retry wrapper for ainvoke — catches transient OperationalErrors mid-run
+# ---------------------------------------------------------------------------
+
+def _make_retry_invoke(graph):
+    """Return a tenacity-wrapped coroutine that calls graph.ainvoke."""
+
+    @retry(
+        retry=retry_if_exception_type(OperationalError),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=3, max=15),
+        reraise=True,
+    )
+    async def _invoke(state, **kwargs):
+        return await graph.ainvoke(state, **kwargs)
+
+    return _invoke
 
 
 # ---------------------------------------------------------------------------
@@ -41,9 +95,9 @@ async def run_portfolio(graph, deps) -> None:
     }
     log.info("portfolio.run.start", run_id=run_id, window_start=state["window_start"])
     try:
-        final = await graph.ainvoke(
-            state, config={"configurable": {"thread_id": run_id}}
-        )
+        await _wait_for_db(deps.ops_repo._engine, run_id)
+        invoke = _make_retry_invoke(graph)
+        final  = await invoke(state, config={"configurable": {"thread_id": run_id}})
         log.info("portfolio.run.done", run_id=run_id, metrics=final.get("metrics"))
         if deps.settings.slack_webhook_url:
             _notify_slack(deps.settings.slack_webhook_url, _portfolio_summary(run_id, final))
@@ -63,7 +117,9 @@ async def run_feedback(graph, deps) -> None:
     }
     log.info("feedback.run.start", run_id=run_id, since=state["since"])
     try:
-        final = await graph.ainvoke(state)
+        await _wait_for_db(deps.ops_repo._engine, run_id)
+        invoke = _make_retry_invoke(graph)
+        final  = await invoke(state)
         log.info("feedback.run.done", run_id=run_id, metrics=final.get("metrics"))
         if deps.settings.slack_webhook_url:
             _notify_slack(deps.settings.slack_webhook_url, _feedback_summary(run_id, final))
