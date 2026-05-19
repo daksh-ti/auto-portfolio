@@ -1,1 +1,27 @@
+# Virtual environment
 .venv/
+__pycache__/
+*.pyc
+
+# Secrets — never commit
+.env
+portfolio_agent/.env
+secrets/
+*.json.secret
+
+# Build / dist
+dist/
+build/
+*.egg-info/
+
+# Dev artefacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

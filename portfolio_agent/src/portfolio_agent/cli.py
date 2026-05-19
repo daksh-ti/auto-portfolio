@@ -241,6 +241,14 @@ def auth_user(
     _run(_inner())
 
 
+@app.command("serve")
+def serve():
+    """Start the APScheduler loop (portfolio daily + feedback sweep). Runs forever."""
+    import asyncio
+    from portfolio_agent.scheduler import main as scheduler_main
+    asyncio.run(scheduler_main())
+
+
 @app.command("approve-pending")
 def approve_pending(
     id: int  = typer.Option(..., help="Pending change ID"),

@@ -1,0 +1,40 @@
+services:
+  portfolio-agent:
+    build:
+      context: ./portfolio_agent
+      dockerfile: Dockerfile
+    image: portfolio-agent:latest
+    restart: unless-stopped
+
+    # Load all PA_* env vars from .env (never commit .env to git)
+    env_file:
+      - ./portfolio_agent/.env
+
+    environment:
+      # Override the Google secrets path to the in-container location.
+      # The actual file is mounted via volumes below.
+      PA_GOOGLE_CLIENT_SECRETS_PATH: /secrets/client_secret.json
+
+    volumes:
+      # Google OAuth client secret — read-only inside the container.
+      # Point HOST_GOOGLE_CLIENT_SECRETS_PATH to the file on your machine.
+      - ${HOST_GOOGLE_CLIENT_SECRETS_PATH:-./secrets/client_secret.json}:/secrets/client_secret.json:ro
+
+      # rules_config.yaml is written by the agent when weights are updated.
+      # Mount the whole config directory so changes survive container restarts.
+      - ./portfolio_agent/config:/app/config
+
+    # Health-check: verify the Python process is alive every 60 s.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import portfolio_agent"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Send structured JSON logs to stdout — collect with your log aggregator of choice.
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"

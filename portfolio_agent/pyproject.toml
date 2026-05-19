@@ -25,6 +25,7 @@ dependencies = [
   "typer>=0.13.0",
   "httpx>=0.27.2",
   "aiosmtplib>=3.0.0",
+  "python-dotenv>=1.0.0",
   "typing-extensions>=4.8",
 ]
 

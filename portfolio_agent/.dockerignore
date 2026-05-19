@@ -1,0 +1,27 @@
+# Virtual environment
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Dev / test artefacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+dist/
+build/
+*.egg-info/
+
+# Secrets — never bake these into the image
+.env
+*.json.secret
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
