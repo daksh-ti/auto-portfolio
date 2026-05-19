@@ -32,7 +32,7 @@ class ChatRecord(TypedDict):
     user_email: str
     project_id: str | None
     started_at: datetime
-    ended_at: datetime
+    ended_at: datetime | None   # may be null for in-progress or incomplete sessions
     messages: list[ChatMessage]
     metadata: dict
 
@@ -54,7 +54,7 @@ class PreprocessedChat(BaseModel):
     user_id: str
     user_email: str
     started_at: datetime
-    ended_at: datetime
+    ended_at: datetime | None   # may be null for in-progress sessions
     project_id: str | None
     original_message_count: int
     filtered_message_count: int
