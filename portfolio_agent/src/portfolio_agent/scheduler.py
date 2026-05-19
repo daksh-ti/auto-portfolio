@@ -124,6 +124,11 @@ async def main() -> None:
     async with build_portfolio_graph(deps) as portfolio_graph, \
                build_feedback_graph(deps)  as feedback_graph:
 
+        # Wire graph instances into the trigger API.
+        from portfolio_agent.api import api, set_app_state
+        set_app_state(deps, portfolio_graph, feedback_graph)
+
+        # APScheduler — cron jobs.
         scheduler = AsyncIOScheduler(timezone=deps.settings.schedule_timezone)
 
         scheduler.add_job(
@@ -154,7 +159,21 @@ async def main() -> None:
             feedback_every_h=deps.settings.feedback_cron_every_hours,
             tz=deps.settings.schedule_timezone,
         )
-        await asyncio.Event().wait()
+
+        # Uvicorn — serve the trigger API on the same event loop.
+        import uvicorn
+        uv_config = uvicorn.Config(
+            api,
+            host="0.0.0.0",
+            port=deps.settings.api_port,
+            loop="none",          # use the already-running asyncio loop
+            log_level="warning",  # structlog handles app-level logging
+        )
+        server = uvicorn.Server(uv_config)
+        log.info("api.server.starting", port=deps.settings.api_port)
+
+        # server.serve() keeps the loop alive; scheduler runs inside the same loop.
+        await server.serve()
 
 
 if __name__ == "__main__":

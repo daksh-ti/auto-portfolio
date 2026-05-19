@@ -15,6 +15,9 @@ services:
       # The actual file is mounted via volumes below.
       PA_GOOGLE_CLIENT_SECRETS_PATH: /secrets/client_secret.json
 
+    ports:
+      - "8000:8000"   # Trigger API (POST /trigger/portfolio, /trigger/feedback)
+
     volumes:
       # Google OAuth client secret — read-only inside the container.
       # Default: portfolio_agent/client_secret.json (never commit this file).

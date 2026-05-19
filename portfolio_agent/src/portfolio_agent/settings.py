@@ -48,6 +48,12 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     email_from: str | None = None   # e.g. "Portfolio Agent <you@gmail.com>"
 
+    # ---- Trigger API ----
+    api_port: int = 8000
+    # Static API key checked via X-API-Key header.
+    # Leave empty to disable auth (dev only — always set in production).
+    api_key: str = ""
+
     # ---- Optional integrations ----
     rules_git_repo_path: Path | None = None
     slack_webhook_url: str | None = None
